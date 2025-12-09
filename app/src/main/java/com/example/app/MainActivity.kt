@@ -16,10 +16,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShowChart
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,35 +30,35 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.app.ui.theme.AppTheme
-import com.example.app.ui.theme.BluePrimary
-import com.example.app.ui.settings.SettingsScreen
+import com.example.app.ui.theme.ThemeOption
+import com.example.app.settings.SettingsScreen
+import com.example.app.home.HomeScreen
+import com.example.app.library.LibraryScreen
+import com.example.app.stats.StatsScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            // Force LIGHT theme so background is your E8EAF0
-            AppTheme(darkTheme = false, dynamicColor = false) {
-                AppRoot()
+            // Global app state
+            var currentTheme by rememberSaveable { mutableStateOf(ThemeOption.LIGHT) }
+            var isLoggedIn by rememberSaveable { mutableStateOf(false) }
+
+            AppTheme(themeOption = currentTheme, dynamicColor = false) {
+                if (!isLoggedIn) {
+                    LoginScreen(
+                        onLoginSuccess = { isLoggedIn = true }
+                    )
+                } else {
+                    MainScaffold(
+                        currentTheme = currentTheme,
+                        onThemeChange = { newTheme -> currentTheme = newTheme },
+                        onLogout = { isLoggedIn = false } // samo nazaj na login
+                    )
+                }
             }
         }
-    }
-}
-
-/**
- * Root – decides between Login and main app.
- */
-@Composable
-fun AppRoot() {
-    var isLoggedIn by rememberSaveable { mutableStateOf(false) }
-
-    if (!isLoggedIn) {
-        LoginScreen(
-            onLoginSuccess = { isLoggedIn = true }
-        )
-    } else {
-        MainScaffold()
     }
 }
 
@@ -69,26 +66,42 @@ fun AppRoot() {
  * Main scaffold with rounded dark bar and center circular "+" FAB.
  */
 @Composable
-fun MainScaffold() {
+fun MainScaffold(
+    currentTheme: ThemeOption,
+    onThemeChange: (ThemeOption) -> Unit,
+    onLogout: () -> Unit
+) {
     var currentDestination by rememberSaveable { mutableStateOf(BottomDestination.HOME) }
 
-    val barColor = Color(0xFF2A2A2A)
+    val colorScheme = MaterialTheme.colorScheme
+
+    // Bottom bar barva glede na temo
+    val barColor = when (currentTheme) {
+        ThemeOption.LIGHT -> Color(0xFF2A2A2A)
+        ThemeOption.DARK -> Color(0xFF1A1A1A)
+        ThemeOption.NIGHT_BLUE -> Color(0xFF050B16)   // nočna modra
+        ThemeOption.JADE_GREEN -> Color(0xFF031813)   // temno jade ozadje
+    }
+
+    val fabColor = colorScheme.primary
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
-            // KEEP your original vertical sizing: 108–128dp tall outer box
+
+            // Bottom bar height is smaller now, FAB sits inside it.
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(128.dp)
+                    .height(88.dp) // PERFECT height for all items including FAB
             ) {
-                // Custom bar to control width/spacing
+
+                // Actual bar background
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
-                        .height(108.dp)
+                        .height(88.dp)
                         .clip(
                             RoundedCornerShape(
                                 topStart = 18.dp,
@@ -97,13 +110,13 @@ fun MainScaffold() {
                         )
                         .background(barColor)
                 ) {
+
                     Row(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(horizontal = 12.dp), // side padding like Figma
+                            .padding(horizontal = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // 5 slots: each one 74dp wide
                         BottomBarItem(
                             destination = BottomDestination.HOME,
                             selected = currentDestination == BottomDestination.HOME,
@@ -116,12 +129,25 @@ fun MainScaffold() {
                             onClick = { currentDestination = BottomDestination.LIBRARY }
                         )
 
-                        // Centre slot under FAB (empty, just spacing)
-                        Spacer(
+                        // Center FAB slot (same width as others)
+                        Box(
                             modifier = Modifier
                                 .width(74.dp)
-                                .height(56.dp)
-                        )
+                                .fillMaxHeight(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            FloatingActionButton(
+                                onClick = { /* TODO */ },
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .offset(y = (-11).dp),   // <-- PERFECT ALIGNMENT FIX
+                                shape = CircleShape,
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = Color.White
+                            ) {
+                                Icon(Icons.Filled.Add, contentDescription = "Add")
+                            }
+                        }
 
                         BottomBarItem(
                             destination = BottomDestination.STATS,
@@ -136,28 +162,9 @@ fun MainScaffold() {
                         )
                     }
                 }
-
-                // FAB – 63dp circle with 2dp dark border
-                FloatingActionButton(
-                    onClick = { /* TODO: open Add flow */ },
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .size(63.dp),
-                    shape = CircleShape,
-                    containerColor = BluePrimary,
-                    contentColor = Color.White
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .border(2.dp, barColor, CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.Filled.Add, contentDescription = "Add")
-                    }
-                }
             }
         }
+
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -169,15 +176,18 @@ fun MainScaffold() {
                 BottomDestination.HOME -> HomeScreen()
                 BottomDestination.LIBRARY -> LibraryScreen()
                 BottomDestination.STATS -> StatsScreen()
-                BottomDestination.SETTINGS -> SettingsScreen()   // IMPORT from ui.settings
+                BottomDestination.SETTINGS -> SettingsScreen(
+                    currentTheme = currentTheme,
+                    onThemeChange = onThemeChange,
+                    onLogoutClick = onLogout
+                )
             }
         }
     }
 }
 
 /**
- * One bottom bar item. Icon + text in a 74dp-wide box,
- * with the content itself roughly 52×36dp centered inside.
+ * One bottom bar item. Icon + text in a 74dp-wide box.
  */
 @Composable
 fun BottomBarItem(
@@ -185,10 +195,12 @@ fun BottomBarItem(
     selected: Boolean,
     onClick: () -> Unit
 ) {
+    val primary = MaterialTheme.colorScheme.primary
+
     Box(
         modifier = Modifier
-            .width(74.dp)               // slot width
-            .height(66.dp)              // close to your 52×36 content box
+            .width(74.dp)
+            .height(66.dp)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
@@ -198,19 +210,16 @@ fun BottomBarItem(
             Icon(
                 imageVector = destination.icon,
                 contentDescription = destination.label,
-                tint = if (selected) BluePrimary else Color.White
+                tint = if (selected) primary else Color.White
             )
             Text(
                 text = destination.label,
-                color = if (selected) BluePrimary else Color.White
+                color = if (selected) primary else Color.White
             )
         }
     }
 }
 
-/**
- * Bottom navigation destinations.
- */
 enum class BottomDestination(
     val label: String,
     val icon: ImageVector,
@@ -221,27 +230,15 @@ enum class BottomDestination(
     SETTINGS("Settings", Icons.Filled.Settings),
 }
 
-/* Temporary placeholders for screens */
-
-@Composable
-fun HomeScreen() {
-    Text("Home screen")
-}
-
-@Composable
-fun LibraryScreen() {
-    Text("Library screen")
-}
-
-@Composable
-fun StatsScreen() {
-    Text("Stats screen")
-}
 
 @Preview(showBackground = true)
 @Composable
 fun AppPreview() {
-    AppTheme(darkTheme = false, dynamicColor = false) {
-        AppRoot()
+    AppTheme(themeOption = ThemeOption.LIGHT, dynamicColor = false) {
+        MainScaffold(
+            currentTheme = ThemeOption.LIGHT,
+            onThemeChange = {},
+            onLogout = {}
+        )
     }
 }

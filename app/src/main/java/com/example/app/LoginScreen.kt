@@ -12,6 +12,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -27,6 +29,7 @@ fun LoginScreen(
 ) {
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     val gradient = Brush.verticalGradient(
         colors = listOf(BluePrimary, TealAccent)
@@ -43,9 +46,10 @@ fun LoginScreen(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // App logo / name
+
+            // APP TITLE – changed from Smart Meal
             Text(
-                text = "Smart Meal",
+                text = "Disciplined",
                 color = PureWhite,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -79,11 +83,23 @@ fun LoginScreen(
                         value = password,
                         onValueChange = { password = it },
                         label = { Text("Password") },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                            keyboardType = KeyboardType.Password
+                        )
                     )
 
+                    // LOGIN BUTTON – only root/root succeeds
                     Button(
-                        onClick = { onLoginSuccess() },
+                        onClick = {
+                            if (username == "root" && password == "root") {
+                                errorMessage = null
+                                onLoginSuccess()
+                            } else {
+                                errorMessage = "Wrong username or password (use root / root)."
+                            }
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(top = 16.dp)
@@ -91,6 +107,19 @@ fun LoginScreen(
                         Text(
                             text = "Login",
                             style = MaterialTheme.typography.labelLarge
+                        )
+                    }
+
+                    // Error message
+                    errorMessage?.let { msg ->
+                        Text(
+                            text = msg,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 8.dp),
+                            textAlign = TextAlign.Center
                         )
                     }
 
